@@ -46,7 +46,7 @@ export const obtenerCorteAbierto = async (req: Request, res: Response): Promise<
 export const cerrarCorte = async (req: Request, res: Response): Promise<void> => {
     const connection = await pool.getConnection();
     try {
-        const { id_Corte } = req.body;
+        const { id_Corte,id_Usuario } = req.body;
         console.log('ID de Corte recibido:', id_Corte);
 
         // Obtener el saldo inicial
@@ -68,8 +68,9 @@ export const cerrarCorte = async (req: Request, res: Response): Promise<void> =>
                         FROM detalle_venta as dv
                         INNER JOIN venta as v
                         ON dv.id_Venta = v.id_Venta
-                        WHERE DATE(v.fecha) =  (SELECT DATE(fecha) FROM corte_caja WHERE id_Corte = ?)`,
-                        [id_Corte]
+                        WHERE DATE(v.fecha) =  (SELECT DATE(fecha) FROM corte_caja WHERE id_Corte = ?)
+                        and v.id_Usuario= ?`,
+                        [id_Corte,id_Usuario]
                     );
                     console.log('Resultado de la consulta de ingresos:', ingresosResult);
 
@@ -78,12 +79,15 @@ export const cerrarCorte = async (req: Request, res: Response): Promise<void> =>
 
                     // Calcular egresos desde la tabla de Retiros
                     const egresosResult = await connection.query(
-                        `SELECT SUM(monto) AS totalEgresos
-                        FROM Retiros
-                       WHERE fecha = (SELECT fecha FROM corte_caja WHERE id_Corte = ?)`,
-                        [id_Corte]
-                    );
-                    console.log('Resultado de la consulta de egresos:', egresosResult);
+                        `SELECT SUM(d.total_entrega) AS totalEgresos
+                        FROM detalle_entrega AS d
+                        INNER JOIN entrega_producto AS e ON d.id_Entrega = e.id_Entrega
+                        WHERE DATE(e.fecha) = (
+                            SELECT DATE(fecha) FROM corte_caja WHERE id_Corte = ?
+                        )
+                        AND e.id_Usuario = ?`,
+                       [id_Corte, id_Usuario]
+                   );
 
                     const totalEgresos = egresosResult[0]?.totalEgresos || 0;
                     console.log('Total de Egresos:', totalEgresos);

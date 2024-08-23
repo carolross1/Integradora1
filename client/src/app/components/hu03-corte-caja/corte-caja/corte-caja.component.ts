@@ -155,11 +155,13 @@ export class CorteCajaComponent implements OnInit {
         this.corteCajaService.obtenerCorteAbierto(id_Usuario).subscribe(
             response => {
                 const id_Corte = response.id_Corte;
+                const id_Usuario = response.id_Usuario;
     
                 // Ahora, enviar el id_Corte para cerrar el corte
-                this.corteCajaService.cerrarCorte({ id_Corte }).subscribe(
+                this.corteCajaService.cerrarCorte({ id_Corte,id_Usuario }).subscribe(
                     response => {
                         if (response.success) {
+                          this.obtenerCorteActual();
                           this.alertaService.showNotification('Corte cerrado con éxito','success')
                          
                         } else {
